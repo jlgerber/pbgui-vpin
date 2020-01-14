@@ -1,5 +1,5 @@
 //! The DistributionDialog allows the user to generate one or more pins for a distribution
-use qt_core::Slot;
+use qt_core::{Signal, Slot};
 use qt_widgets::{
     cpp_core::{CastInto, CppBox, DynamicCast, MutPtr},
     q_abstract_item_view::SelectionMode,
@@ -21,7 +21,10 @@ pub struct VpinDialog<'a> {
 //Option<MutPtr<QWidget>>
 impl<'a> VpinDialog<'a> {
     /// Create a new VpinDialog
-    pub fn create(distribution: &str, parent: impl CastInto<MutPtr<QWidget>>) -> VpinDialog {
+    pub fn create<'b: 'a>(
+        distribution: &str,
+        parent: impl CastInto<MutPtr<QWidget>>,
+    ) -> VpinDialog {
         unsafe {
             let mut dialog = QDialog::new_1a(parent);
             //dialog.set_window_title(&qs("Add Version-Pin"));
@@ -59,6 +62,7 @@ impl<'a> VpinDialog<'a> {
             dialog.set_layout(layout.into_ptr());
             dialog.set_modal(true);
             let mut dialog_cpy = dialog.as_mut_ptr();
+
             let accepted = Slot::new(move || {
                 let mut items = roles_list_cpy.selected_items();
                 if !items.is_empty() {
@@ -79,11 +83,47 @@ impl<'a> VpinDialog<'a> {
                 buttons,
                 accepted,
             };
-            //buttons.accepted().connect(dialog.dialog.slot_accept());
             buttons.accepted().connect(&dialog.accepted);
             buttons.rejected().connect(dialog.dialog.slot_reject());
             dialog
         }
+    }
+
+    /// Return the accepted signal from the button
+    pub unsafe fn accepted(&self) -> Signal<()> {
+        self.buttons.accepted()
+    }
+
+    /// Dismiss the dialog using accept
+    pub unsafe fn accept(&mut self) {
+        self.dialog.accept()
+    }
+
+    /// Return the rejected signal
+    pub unsafe fn rejected(&self) -> Signal<()> {
+        self.buttons.rejected()
+    }
+    /// Return a lsit of selected item names
+    pub unsafe fn selected_roles(&self) -> Vec<String> {
+        let mut results = Vec::new();
+        let mut items = self.roles_list.selected_items();
+        if !items.is_empty() {
+            for _c in 0..items.length() {
+                let item = items.take_first();
+                results.push(item.text().to_std_string());
+            }
+        }
+        results
+    }
+
+    /// Retrieve the current site
+    pub unsafe fn selected_site(&self) -> String {
+        self.sites_cbox.current_text().to_std_string()
+    }
+
+    /// Return the selected Sequence/shot if applicable
+    pub unsafe fn selected_level(&self) -> Option<String> {
+        None
     }
 
     /// Set the sites
@@ -177,7 +217,7 @@ impl<'a> VpinDialog<'a> {
 
     unsafe fn add_roles_listwidget(mut parent: MutPtr<QLayout>) -> MutPtr<QListWidget> {
         let mut list_widget = QListWidget::new_0a();
-        list_widget.set_selection_mode(SelectionMode::MultiSelection);
+        list_widget.set_selection_mode(SelectionMode::ExtendedSelection);
         let list_widget_ptr = list_widget.as_mut_ptr();
         parent.add_widget(list_widget.into_ptr());
         list_widget_ptr
