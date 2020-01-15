@@ -1,34 +1,86 @@
 use pbgui_vpin::vpin_dialog;
-use pbgui_vpin::vpin_dialog::create_vlayout;
+use pbgui_vpin::vpin_dialog::LevelMap;
 use qt_core::{Slot, SlotOfInt};
-use qt_widgets::cpp_core::MutPtr;
 use qt_widgets::QApplication;
-use qt_widgets::QFrame;
 use qt_widgets::{QMainWindow, QPushButton};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 fn main() {
     QApplication::init(|_app| unsafe {
         let mut main = QMainWindow::new_0a();
         let mut main_ptr = main.as_mut_ptr();
         let mut button = QPushButton::new();
-        let mut button_ptr = button.as_mut_ptr();
+        let button_ptr = button.as_mut_ptr();
         main.set_central_widget(button.into_ptr());
-        let pbslot = Slot::new(move || {
-            let mut dialog = vpin_dialog::VpinDialog::create("modelpublish-1.2.0", main_ptr);
-            dialog.set_roles(vec![
-                "anim", "integ", "model", "fx", "cfx", "light", "comp", "roto",
-            ]);
-            dialog.set_sites(vec!["hyderabad", "montreal", "playa", "vancouver"]);
-            let finished_slot = SlotOfInt::new(move |result: std::os::raw::c_int| {
-                println!("result {}", result);
-            });
-            dialog.finished().connect(&finished_slot);
-            let result = dialog.exec();
+
+        let dialog = Rc::new(RefCell::new(vpin_dialog::VpinDialog::create(
+            "modelpublish-1.2.0",
+            main_ptr,
+        )));
+        dialog.borrow_mut().set_default_stylesheet();
+        dialog.borrow_mut().set_roles(vec![
+            "anim", "integ", "model", "fx", "cfx", "light", "comp", "roto",
+        ]);
+        let levelmap = initialize_levelmap();
+        dialog.borrow_mut().set_levels(levelmap);
+        dialog
+            .borrow_mut()
+            .set_sites(vec!["hyderabad", "montreal", "playa", "vancouver"]);
+        let finished_slot = SlotOfInt::new(move |result: std::os::raw::c_int| {
             println!("result {}", result);
-            //dialog.open();
         });
-        button_ptr.pressed().connect(&pbslot);
+
+        dialog.borrow_mut().finished().connect(&finished_slot);
+
+        let dialog_c = dialog.clone();
+        // we need to create a slot that is triggered when OK is presswed
+        let accepted_slot = Slot::new(move || {
+            println!("accepted slot");
+            let roles = dialog_c.borrow().selected_roles();
+            println!("{:?}", roles);
+            println!("calling accept");
+            dialog_c.borrow_mut().accept();
+        });
+
+        // here is where we can cheat. We rely on the fact that
+        // dialogb will outlive the borrow as mutable. We pass thiw
+        // in to the pressed slot.
+        dialog.borrow_mut().accepted().connect(&accepted_slot);
+        //dialog.borrow_mut().set_roles_focus();
+        //let mut dialogb = dialog.borrow_mut().dialog.as_mut_ptr();
+        let mut dialogb = dialog.borrow_mut().dialog_mut();
+
+        let exec_dialog_slot = Slot::new(move || {
+            let result = dialogb.exec(); //
+            println!("result {}", result);
+        });
+
+        button_ptr.pressed().connect(&exec_dialog_slot);
         main_ptr.show();
         QApplication::exec()
     });
+}
+
+fn initialize_levelmap() -> LevelMap {
+    let mut lm = LevelMap::new();
+    lm.insert(
+        "RD".to_string(),
+        vec![
+            "0001".to_string(),
+            "0002".to_string(),
+            "0003".to_string(),
+            "9999".to_string(),
+        ],
+    );
+    lm.insert(
+        "AA".to_string(),
+        vec![
+            "0001".to_string(),
+            "0002".to_string(),
+            "0003".to_string(),
+            "0004".to_string(),
+        ],
+    );
+    lm
 }
