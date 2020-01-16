@@ -1,11 +1,64 @@
 use pbgui_vpin::vpin_dialog;
 use pbgui_vpin::vpin_dialog::LevelMap;
-use qt_core::{Slot, SlotOfInt};
+use qt_core::{QString, Slot, SlotOfInt};
+use qt_thread_conductor::{conductor::Conductor, qt_utils::qs, traits::*};
 use qt_widgets::QApplication;
 use qt_widgets::{QMainWindow, QPushButton};
 use std::rc::Rc;
+use std::sync::mpsc::channel;
+use std::sync::mpsc::{Receiver, Sender};
+use std::thread::spawn;
+
+#[derive(Debug)]
+pub enum Msg {
+    NewJokeRequest,
+    Quit,
+}
+use qt_thread_conductor::traits::*;
+use qt_widgets::cpp_core::{CppBox, Ref};
+
+#[derive(Debug, PartialEq)]
+pub enum Event {
+    DbJokeUpdate,
+    DbPunchlineUpdate,
+}
+
+const DDJOKEUPDATE: &'static str = "DbJokeUpdate";
+const DDPUNCHLINEUPDATE: &'static str = "DbPunchlineUpdate";
+
+impl ToQString for Event {
+    fn to_qstring(&self) -> CppBox<QString> {
+        match &self {
+            &Event::DbPunchlineUpdate => QString::from_std_str(DDPUNCHLINEUPDATE),
+            &Event::DbJokeUpdate => QString::from_std_str(DDJOKEUPDATE),
+        }
+    }
+}
+
+impl FromQString for Event {
+    fn from_qstring(qs: Ref<QString>) -> Self {
+        match qs.to_std_string().as_str() {
+            DDJOKEUPDATE => Event::DbJokeUpdate,
+            DDPUNCHLINEUPDATE => Event::DbPunchlineUpdate,
+            _ => panic!("Unable to convert to Event"),
+        }
+    }
+}
 
 fn main() {
+    let mut handles = Vec::new();
+    // sender, receiver for communicating from secondary thread to primary ui thread
+    let (sender, receiver) = channel();
+    // sender and receiver for communicating from ui thread to secondary thread
+    let (to_thread_sender, to_thread_receiver): (Sender<Msg>, Receiver<Msg>) = channel();
+    // sender to handle quitting
+    let to_thread_sender_quit = to_thread_sender.clone();
+    let quit_slot = Slot::new(move || {
+        to_thread_sender_quit
+            .send(Msg::Quit)
+            .expect("couldn't send");
+    });
+
     QApplication::init(|_app| unsafe {
         let mut main = QMainWindow::new_0a();
         let mut main_ptr = main.as_mut_ptr();

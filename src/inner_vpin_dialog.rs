@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 //! The DistributionDialog allows the user to generate one or more pins for a distribution
-use qt_core::{FocusPolicy, Signal, SlotOfInt};
+use qt_core::{FocusPolicy, QString, Signal, SlotOfInt};
 use qt_widgets::{
     cpp_core::{CastInto, CppBox, MutPtr, Ptr},
     q_abstract_item_view::SelectionMode,
@@ -15,9 +15,9 @@ pub type LevelMap = HashMap<String, Vec<String>>;
 
 pub use rustqt_utils::{create_hlayout, create_vlayout, qs, set_stylesheet_from_str};
 
-const STYLE_STR: &'static str = include_str!("../resources/pbgui_vpin.qss");
-const DEFAULT_SEQ: &'static str = "All Sequences";
-const DEFAULT_SHOT: &'static str = "All Shots";
+pub const STYLE_STR: &'static str = include_str!("../resources/pbgui_vpin.qss");
+pub const DEFAULT_SEQ: &'static str = "All Sequences";
+pub const DEFAULT_SHOT: &'static str = "All Shots";
 
 pub struct InnerVpinDialog<'a> {
     dialog: CppBox<QDialog>,
@@ -149,7 +149,7 @@ impl<'a> InnerVpinDialog<'a> {
         self.buttons.accepted()
     }
 
-    /// Dismiss the dialog using accept. This is a convenience for consumrs
+    /// Dismiss the dialog using accept. This is a convenience for consumers
     /// of this struct, to avoid having to drill down
     pub unsafe fn accept(&mut self) {
         self.dialog.accept()
@@ -168,6 +168,14 @@ impl<'a> InnerVpinDialog<'a> {
     /// Return the rejected signal
     pub unsafe fn rejected(&self) -> Signal<()> {
         self.buttons.rejected()
+    }
+
+    pub unsafe fn current_seq_index_changed(&self) -> Signal<(*const QString,)> {
+        self.seqs_cbox.current_index_changed2()
+    }
+
+    pub unsafe fn current_shot_index_changed(&self) -> Signal<(*const QString,)> {
+        self.shots_cbox.current_index_changed2()
     }
 
     /// Return a lsit of selected item names
@@ -255,24 +263,24 @@ impl<'a> InnerVpinDialog<'a> {
         }
     }
 
-    /// Given a new LevelMap, repalace the existing one
-    pub fn set_levels_map(&mut self, levels: LevelMap) {
+    /// Given a new LevelMap, replace the existing one
+    pub fn set_levels(&mut self, levels: LevelMap) {
         std::mem::replace(&mut self.levels, levels);
     }
 
-    pub fn set_levels(&self, levels: Vec<String>) {
-        unsafe {
-            let mut seqs_cbox = self.seqs_cbox;
-            let mut shots_cbox = self.shots_cbox;
-            seqs_cbox.clear();
-            seqs_cbox.add_item_q_string(&qs(DEFAULT_SEQ));
-            for seq in levels {
-                seqs_cbox.add_item_q_string(&qs(seq));
-            }
-            shots_cbox.clear();
-            shots_cbox.add_item_q_string(&qs(DEFAULT_SHOT));
-        }
-    }
+    // pub fn set_levels(&self, levels: Vec<String>) {
+    //     unsafe {
+    //         let mut seqs_cbox = self.seqs_cbox;
+    //         let mut shots_cbox = self.shots_cbox;
+    //         seqs_cbox.clear();
+    //         seqs_cbox.add_item_q_string(&qs(DEFAULT_SEQ));
+    //         for seq in levels {
+    //             seqs_cbox.add_item_q_string(&qs(seq));
+    //         }
+    //         shots_cbox.clear();
+    //         shots_cbox.add_item_q_string(&qs(DEFAULT_SHOT));
+    //     }
+    // }
 
     pub fn set_levels_alt(&self) {
         unsafe {
@@ -302,6 +310,14 @@ impl<'a> InnerVpinDialog<'a> {
                 shots_cbox.add_item_q_string(&qs(shot));
             }
         }
+    }
+
+    pub unsafe fn shots_cbox(&self) -> MutPtr<QComboBox> {
+        self.shots_cbox
+    }
+
+    pub unsafe fn levels(&self) -> &LevelMap {
+        &self.levels
     }
 
     pub unsafe fn set_roles_focus(&mut self) {

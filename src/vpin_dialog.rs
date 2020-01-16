@@ -1,39 +1,66 @@
 use crate::inner_vpin_dialog::InnerVpinDialog;
 pub use crate::inner_vpin_dialog::LevelMap;
+use crate::inner_vpin_dialog::{DEFAULT_SEQ, DEFAULT_SHOT};
 use qt_core::{QString, Signal, SlotOfQString};
 use qt_widgets::{
     cpp_core::{CastInto, MutPtr, Ptr, Ref},
-    QComboBox, QDialog, QWidget,
+    QDialog, QWidget,
 };
+use rustqt_utils::qs;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct VpinDialog<'a> {
     dialog: Rc<RefCell<InnerVpinDialog<'a>>>,
     seq_changed: SlotOfQString<'a>,
+    shot_changed: SlotOfQString<'a>,
 }
 
 impl<'a> VpinDialog<'a> {
-    pub unsafe fn create(distribution: &str, parent: impl CastInto<MutPtr<QWidget>>) -> VpinDialog {
+    pub unsafe fn create(
+        show_name: &str,
+        distribution: &str,
+        parent: impl CastInto<MutPtr<QWidget>>,
+    ) -> VpinDialog {
         let inner_vpin_dialog = Rc::new(RefCell::new(InnerVpinDialog::create(
-            "DEV01",
+            show_name,
             distribution,
             parent,
         )));
-        let ivd = inner_vpin_dialog.clone();
+        let mut shots_cbox = inner_vpin_dialog.clone().borrow_mut().shots_cbox();
+
         let seq_changed = SlotOfQString::new(move |idx: Ref<QString>| {
-            println!("seq changed");
             let sequence = idx.to_std_string();
-            ivd.borrow().set_shots_for_seq(sequence.as_str());
+            println!("seq changed {}", sequence);
+            shots_cbox.clear();
+            shots_cbox.add_item_q_string(&qs(DEFAULT_SHOT));
+            // if let Some(shots) = levels.get(sequence.as_str()) {
+            //     for shot in shots {
+            //         shots_cbox.add_item_q_string(&qs(shot));
+            //     }
+            // }
+        });
+        let shot_changed = SlotOfQString::new(|idx: Ref<QString>| {
+            println!("shot changed {}", idx.to_std_string());
         });
         let dialog = VpinDialog {
-            dialog: inner_vpin_dialog,
+            dialog: inner_vpin_dialog.clone(),
             seq_changed,
+            shot_changed,
         };
+        //Set up signals / slots
         dialog
-            .seqs_cb()
-            .current_index_changed2()
+            .current_seq_index_changed()
             .connect(&dialog.seq_changed);
+
+        dialog
+            .current_shot_index_changed()
+            .connect(&dialog.shot_changed);
+
+        // dialog
+        //     .seqs_cb()
+        //     .current_index_changed2()
+        //     .connect(&dialog.seq_changed);
         dialog
     }
 
@@ -45,7 +72,7 @@ impl<'a> VpinDialog<'a> {
 
     /// Dismiss the dialog using accept. This is a convenience for consumrs
     /// of this struct, to avoid having to drill down
-    pub unsafe fn accept(&self) {
+    pub unsafe fn accept(&mut self) {
         self.dialog.borrow_mut().accept()
     }
 
@@ -58,7 +85,7 @@ impl<'a> VpinDialog<'a> {
     }
 
     /// Get a mutable pointer to the dialog
-    pub fn dialog_mut(&self) -> MutPtr<QDialog> {
+    pub fn dialog_mut(&mut self) -> MutPtr<QDialog> {
         self.dialog.borrow_mut().dialog_mut()
     }
 
@@ -68,6 +95,7 @@ impl<'a> VpinDialog<'a> {
     }
 
     /// Return a lsit of selected item names
+    /// ption<
     pub unsafe fn selected_roles(&self) -> Option<Vec<String>> {
         self.dialog.borrow().selected_roles()
     }
@@ -90,33 +118,28 @@ impl<'a> VpinDialog<'a> {
     }
 
     /// Load the stylesheet
-    pub unsafe fn set_default_stylesheet(&self) {
+    pub unsafe fn set_default_stylesheet(&mut self) {
         self.dialog.borrow_mut().set_default_stylesheet();
     }
 
     /// Set the sites
-    pub fn set_sites(&self, sites: Vec<&str>) {
-        self.dialog.borrow().set_sites(sites);
+    pub fn set_sites(&mut self, sites: Vec<&str>) {
+        self.dialog.borrow_mut().set_sites(sites);
     }
 
     /// set the list of rols
-    pub fn set_roles(&self, roles: Vec<&str>) {
-        self.dialog.borrow().set_roles(roles);
-    }
-    pub fn seqs_cb(&self) -> MutPtr<QComboBox> {
-        self.dialog.borrow().seqs_cb()
+    pub fn set_roles(&mut self, roles: Vec<&str>) {
+        self.dialog.borrow_mut().set_roles(roles);
     }
     /// Given a new LevelMap, repalace the existing one
-    pub fn set_levels_map(&self, levels: LevelMap) {
-        self.dialog.borrow_mut().set_levels_map(levels);
+    pub fn set_levels(&mut self, levels: LevelMap) {
+        self.dialog.borrow_mut().set_levels(levels);
     }
-
-    pub fn set_levels(&self, levels: Vec<String>) {
-        //let levels = self.dialog.borrow().seqs();
-        self.dialog.borrow().set_levels(levels);
+    ///
+    pub unsafe fn current_seq_index_changed(&self) -> Signal<(*const QString,)> {
+        self.dialog.borrow().current_seq_index_changed()
     }
-
-    pub fn set_levels_alt(&self) {
-        self.dialog.borrow().set_levels_alt();
+    pub unsafe fn current_shot_index_changed(&self) -> Signal<(*const QString,)> {
+        self.dialog.borrow().current_shot_index_changed()
     }
 }
