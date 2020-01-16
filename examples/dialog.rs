@@ -24,9 +24,9 @@ fn main() {
         let levelmap = initialize_levelmap();
         dialog.set_levels_map(levelmap);
         dialog.set_levels_alt();
-        dialog.set_sites(vec!["hyderabad", "montreal", "playa", "vancouver"]);
+        dialog.set_sites(vec!["any", "hyderabad", "montreal", "playa", "vancouver"]);
         let finished_slot = SlotOfInt::new(move |result: std::os::raw::c_int| {
-            println!("result {}", result);
+            println!("finished_slot -> {}", result);
         });
 
         dialog.finished().connect(&finished_slot);
@@ -34,16 +34,18 @@ fn main() {
         let dialog_c = dialog.clone();
         // we need to create a slot that is triggered when OK is presswed
         let accepted_slot = Slot::new(move || {
-            println!("accepted slot");
             if let Some(roles) = dialog_c.selected_roles() {
                 println!("roles: {:?}", roles);
             } else {
                 println!("roles: any");
             }
             if let Some(selected_level) = dialog_c.selected_level() {
-                println!("level override: {:?}", selected_level);
+                println!("level: {:?}", selected_level);
+            } else {
+                println!("level: {}", dialog_c.show_name());
             }
-            println!("calling accept");
+            let site = dialog_c.selected_site();
+            println!("site:  {}", site);
             dialog_c.accept();
         });
 
@@ -57,7 +59,7 @@ fn main() {
 
         let exec_dialog_slot = Slot::new(move || {
             let result = dialogb.exec(); //
-            println!("result {}", result);
+            println!("exec_dialog_slot triggered by button result -> {}", result);
         });
 
         button_ptr.pressed().connect(&exec_dialog_slot);

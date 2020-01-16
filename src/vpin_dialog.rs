@@ -22,7 +22,7 @@ impl<'a> VpinDialog<'a> {
         )));
         let ivd = inner_vpin_dialog.clone();
         let seq_changed = SlotOfQString::new(move |idx: Ref<QString>| {
-            println!("seq changed");
+            //println!("seq changed");
             let sequence = idx.to_std_string();
             ivd.borrow().set_shots_for_seq(sequence.as_str());
         });
@@ -77,9 +77,13 @@ impl<'a> VpinDialog<'a> {
         self.dialog.borrow().selected_site()
     }
 
+    pub fn show_name(&self) -> String {
+        self.dialog.borrow().show_name().to_string()
+    }
+
     /// Return the selected Sequence/shot if applicable
     pub unsafe fn selected_level(&self) -> Option<String> {
-        let show = self.dialog.borrow().show_name().to_string();
+        let show = self.show_name();
         if let Some(sequence) = self.dialog.borrow().selected_seq() {
             if let Some(shot) = self.dialog.borrow().selected_shot() {
                 return Some(format!("{}.{}.{}", show, sequence, shot));
