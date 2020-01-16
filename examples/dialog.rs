@@ -3,7 +3,6 @@ use pbgui_vpin::vpin_dialog::LevelMap;
 use qt_core::{Slot, SlotOfInt};
 use qt_widgets::QApplication;
 use qt_widgets::{QMainWindow, QPushButton};
-use std::cell::RefCell;
 use std::rc::Rc;
 
 fn main() {

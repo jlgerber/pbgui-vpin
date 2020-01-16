@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! The DistributionDialog allows the user to generate one or more pins for a distribution
 use qt_core::{FocusPolicy, Signal, SlotOfInt};
 use qt_widgets::{
