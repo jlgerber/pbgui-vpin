@@ -1,6 +1,6 @@
 use crate::inner_vpin_dialog::InnerVpinDialog;
 pub use crate::inner_vpin_dialog::LevelMap;
-use qt_core::Signal;
+use qt_core::{Signal, SlotOfQString};
 use qt_widgets::{
     cpp_core::{CastInto, MutPtr, Ptr},
     QDialog, QWidget,
@@ -9,12 +9,12 @@ use std::cell::RefCell;
 
 pub struct VpinDialog<'a> {
     dialog: RefCell<InnerVpinDialog<'a>>,
+    seq_changed: SlotOfQString<'a>,
 }
 
 impl<'a> VpinDialog<'a> {
     pub unsafe fn create(distribution: &str, parent: impl CastInto<MutPtr<QWidget>>) -> VpinDialog {
         let inner_vpin_dialog = RefCell::new(InnerVpinDialog::create(distribution, parent));
-
         let dialog = VpinDialog {
             dialog: inner_vpin_dialog,
         };
