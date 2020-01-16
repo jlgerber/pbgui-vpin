@@ -20,6 +20,7 @@ const DEFAULT_SHOT: &'static str = "All Shots";
 
 pub struct InnerVpinDialog<'a> {
     dialog: CppBox<QDialog>,
+    show: String,
     roles_checkbox: MutPtr<QCheckBox>,
     roles_filter: MutPtr<QLineEdit>,
     roles_list: MutPtr<QListWidget>,
@@ -33,7 +34,11 @@ pub struct InnerVpinDialog<'a> {
 
 impl<'a> InnerVpinDialog<'a> {
     /// Create a new InnerVpinDialog
-    pub fn create(distribution: &str, parent: impl CastInto<MutPtr<QWidget>>) -> InnerVpinDialog {
+    pub fn create<I: Into<String>>(
+        show: I,
+        distribution: &str,
+        parent: impl CastInto<MutPtr<QWidget>>,
+    ) -> InnerVpinDialog {
         unsafe {
             let mut dialog = QDialog::new_1a(parent);
             dialog.set_object_name(&qs("AddVersionPinDialog"));
@@ -94,6 +99,7 @@ impl<'a> InnerVpinDialog<'a> {
             // create the dialog
             let mut dialog = InnerVpinDialog {
                 dialog,
+                show: show.into(),
                 roles_checkbox,
                 roles_filter: roles_filter,
                 roles_list,
@@ -103,7 +109,6 @@ impl<'a> InnerVpinDialog<'a> {
                 buttons,
                 levels: LevelMap::new(),
                 roles_cb_slot: SlotOfInt::new(move |active: std::os::raw::c_int| {
-                    println!("{} active", active);
                     if active > 0 {
                         roles_list_ref.set_enabled(true);
                         roles_filter_ref.set_enabled(true);
@@ -134,6 +139,9 @@ impl<'a> InnerVpinDialog<'a> {
         }
     }
 
+    pub fn show_name(&self) -> &str {
+        &self.show
+    }
     /// Return the accepted signal from the button. This is provided as a convenience
     /// for hooking up a slot from this struct.
     pub unsafe fn accepted(&self) -> Signal<()> {
@@ -162,8 +170,12 @@ impl<'a> InnerVpinDialog<'a> {
     }
 
     /// Return a lsit of selected item names
-    pub unsafe fn selected_roles(&self) -> Vec<String> {
+    pub unsafe fn selected_roles(&self) -> Option<Vec<String>> {
+        if !self.roles_checkbox.is_checked() {
+            return None;
+        };
         let mut results = Vec::new();
+
         if self.roles_list.is_null() {
             panic!("roles_list pointer is null")
         };
@@ -174,7 +186,7 @@ impl<'a> InnerVpinDialog<'a> {
                 results.push(item.text().to_std_string());
             }
         }
-        results
+        Some(results)
     }
 
     /// Retrieve the current site
@@ -216,12 +228,32 @@ impl<'a> InnerVpinDialog<'a> {
         }
     }
 
+    /// provide a vector of strings representing the sequences stored in the map
     pub fn seqs(&self) -> Vec<String> {
         self.levels
             .keys()
             .map(|x| x.to_string())
             .collect::<Vec<_>>()
     }
+
+    pub unsafe fn selected_seq(&self) -> Option<String> {
+        let result = self.seqs_cbox.current_text().to_std_string();
+        if result == DEFAULT_SEQ {
+            None
+        } else {
+            Some(result)
+        }
+    }
+
+    pub unsafe fn selected_shot(&self) -> Option<String> {
+        let result = self.shots_cbox.current_text().to_std_string();
+        if result == DEFAULT_SHOT {
+            None
+        } else {
+            Some(result)
+        }
+    }
+
     /// Given a new LevelMap, repalace the existing one
     pub fn set_levels_map(&mut self, levels: LevelMap) {
         std::mem::replace(&mut self.levels, levels);

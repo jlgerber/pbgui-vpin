@@ -15,8 +15,11 @@ pub struct VpinDialog<'a> {
 
 impl<'a> VpinDialog<'a> {
     pub unsafe fn create(distribution: &str, parent: impl CastInto<MutPtr<QWidget>>) -> VpinDialog {
-        let inner_vpin_dialog =
-            Rc::new(RefCell::new(InnerVpinDialog::create(distribution, parent)));
+        let inner_vpin_dialog = Rc::new(RefCell::new(InnerVpinDialog::create(
+            "DEV01",
+            distribution,
+            parent,
+        )));
         let ivd = inner_vpin_dialog.clone();
         let seq_changed = SlotOfQString::new(move |idx: Ref<QString>| {
             println!("seq changed");
@@ -51,12 +54,12 @@ impl<'a> VpinDialog<'a> {
     }
     /// Get a ponter to the dialog
     pub fn dialog(&self) -> Ptr<QDialog> {
-        unsafe { self.dialog.borrow().dialog() }
+        self.dialog.borrow().dialog()
     }
 
     /// Get a mutable pointer to the dialog
     pub fn dialog_mut(&self) -> MutPtr<QDialog> {
-        unsafe { self.dialog.borrow_mut().dialog_mut() }
+        self.dialog.borrow_mut().dialog_mut()
     }
 
     /// Return the rejected signal
@@ -65,7 +68,7 @@ impl<'a> VpinDialog<'a> {
     }
 
     /// Return a lsit of selected item names
-    pub unsafe fn selected_roles(&self) -> Vec<String> {
+    pub unsafe fn selected_roles(&self) -> Option<Vec<String>> {
         self.dialog.borrow().selected_roles()
     }
 
@@ -76,6 +79,13 @@ impl<'a> VpinDialog<'a> {
 
     /// Return the selected Sequence/shot if applicable
     pub unsafe fn selected_level(&self) -> Option<String> {
+        let show = self.dialog.borrow().show_name().to_string();
+        if let Some(sequence) = self.dialog.borrow().selected_seq() {
+            if let Some(shot) = self.dialog.borrow().selected_shot() {
+                return Some(format!("{}.{}.{}", show, sequence, shot));
+            }
+            return Some(format!("{}.{}", show, sequence));
+        }
         None
     }
 
