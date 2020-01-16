@@ -23,7 +23,9 @@ fn main() {
             "anim", "integ", "model", "fx", "cfx", "light", "comp", "roto",
         ]);
         let levelmap = initialize_levelmap();
-        dialog.set_levels(levelmap);
+        dialog.set_levels_map(levelmap);
+        dialog.set_levels_alt();
+        //dialog.set_levels(vec!["AA".to_string(), "BB".to_string()]);
         dialog.set_sites(vec!["hyderabad", "montreal", "playa", "vancouver"]);
         let finished_slot = SlotOfInt::new(move |result: std::os::raw::c_int| {
             println!("result {}", result);

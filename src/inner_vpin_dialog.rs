@@ -193,48 +193,80 @@ impl<'a> InnerVpinDialog<'a> {
     }
 
     /// Set the sites
-    pub fn set_sites(&mut self, sites: Vec<&str>) {
+    pub fn set_sites(&self, sites: Vec<&str>) {
         unsafe {
-            self.sites_cbox.clear();
+            let mut sites_cbox = self.sites_cbox;
+            sites_cbox.clear();
             for site in sites {
-                self.sites_cbox.add_item_q_string(&qs(site));
+                sites_cbox.add_item_q_string(&qs(site));
             }
         }
     }
 
     /// set the list of rols
-    pub fn set_roles(&mut self, roles: Vec<&str>) {
+    pub fn set_roles(&self, roles: Vec<&str>) {
         unsafe {
-            self.roles_list.clear();
+            let mut roles_list = self.roles_list;
+            roles_list.clear();
             for role in roles {
-                self.roles_list.add_item_q_string(&qs(role));
+                roles_list.add_item_q_string(&qs(role));
             }
-            self.roles_list.select_all();
-            self.roles_list.set_focus_policy(FocusPolicy::StrongFocus);
+            roles_list.select_all();
+            roles_list.set_focus_policy(FocusPolicy::StrongFocus);
         }
     }
 
+    pub fn seqs(&self) -> Vec<String> {
+        self.levels
+            .keys()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+    }
     /// Given a new LevelMap, repalace the existing one
-    pub fn set_levels(&mut self, levels: LevelMap) {
+    pub fn set_levels_map(&mut self, levels: LevelMap) {
         std::mem::replace(&mut self.levels, levels);
+    }
+
+    pub fn set_levels(&self, levels: Vec<String>) {
         unsafe {
-            self.seqs_cbox.clear();
-            self.seqs_cbox.add_item_q_string(&qs(DEFAULT_SEQ));
-            for seq in self.levels.keys() {
-                self.seqs_cbox.add_item_q_string(&qs(seq));
+            let mut seqs_cbox = self.seqs_cbox;
+            let mut shots_cbox = self.shots_cbox;
+            seqs_cbox.clear();
+            seqs_cbox.add_item_q_string(&qs(DEFAULT_SEQ));
+            for seq in levels {
+                seqs_cbox.add_item_q_string(&qs(seq));
             }
-            self.shots_cbox.clear();
-            self.shots_cbox.add_item_q_string(&qs(DEFAULT_SHOT));
+            shots_cbox.clear();
+            shots_cbox.add_item_q_string(&qs(DEFAULT_SHOT));
         }
     }
 
+    pub fn set_levels_alt(&self) {
+        unsafe {
+            let mut seqs_cbox = self.seqs_cbox;
+            let mut shots_cbox = self.shots_cbox;
+            seqs_cbox.clear();
+            seqs_cbox.add_item_q_string(&qs(DEFAULT_SEQ));
+            for seq in self.levels.keys() {
+                seqs_cbox.add_item_q_string(&qs(seq));
+            }
+            shots_cbox.clear();
+            shots_cbox.add_item_q_string(&qs(DEFAULT_SHOT));
+        }
+    }
+
+    pub unsafe fn clear_shots(&self) {
+        let mut shots_cbox = self.shots_cbox;
+        shots_cbox.clear();
+    }
     /// Given a sequence from a selection, populate the shot combobox
-    pub unsafe fn set_shots_for_seq(&mut self, sequence: &str) {
-        self.shots_cbox.clear();
-        self.shots_cbox.add_item_q_string(&qs(DEFAULT_SHOT));
+    pub unsafe fn set_shots_for_seq(&self, sequence: &str) {
+        let mut shots_cbox = self.shots_cbox;
+        shots_cbox.clear();
+        shots_cbox.add_item_q_string(&qs(DEFAULT_SHOT));
         if let Some(shots) = self.levels.get(sequence) {
             for shot in shots {
-                self.shots_cbox.add_item_q_string(&qs(shot));
+                shots_cbox.add_item_q_string(&qs(shot));
             }
         }
     }
@@ -268,6 +300,9 @@ impl<'a> InnerVpinDialog<'a> {
 
     pub fn finished(&self) -> qt_core::Signal<(std::os::raw::c_int,)> {
         self.dialog.finished()
+    }
+    pub fn seqs_cb(&self) -> MutPtr<QComboBox> {
+        self.seqs_cbox
     }
 
     unsafe fn add_site_cbox(mut parent: MutPtr<QLayout>) -> MutPtr<QComboBox> {

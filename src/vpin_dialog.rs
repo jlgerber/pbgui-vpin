@@ -1,23 +1,36 @@
 use crate::inner_vpin_dialog::InnerVpinDialog;
 pub use crate::inner_vpin_dialog::LevelMap;
-use qt_core::{Signal, SlotOfQString};
+use qt_core::{QString, Signal, SlotOfQString};
 use qt_widgets::{
-    cpp_core::{CastInto, MutPtr, Ptr},
-    QDialog, QWidget,
+    cpp_core::{CastInto, MutPtr, Ptr, Ref},
+    QComboBox, QDialog, QWidget,
 };
 use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct VpinDialog<'a> {
-    dialog: RefCell<InnerVpinDialog<'a>>,
+    dialog: Rc<RefCell<InnerVpinDialog<'a>>>,
     seq_changed: SlotOfQString<'a>,
 }
 
 impl<'a> VpinDialog<'a> {
     pub unsafe fn create(distribution: &str, parent: impl CastInto<MutPtr<QWidget>>) -> VpinDialog {
-        let inner_vpin_dialog = RefCell::new(InnerVpinDialog::create(distribution, parent));
+        let inner_vpin_dialog =
+            Rc::new(RefCell::new(InnerVpinDialog::create(distribution, parent)));
+        let ivd = inner_vpin_dialog.clone();
+        let seq_changed = SlotOfQString::new(move |idx: Ref<QString>| {
+            println!("seq changed");
+            let sequence = idx.to_std_string();
+            ivd.borrow().set_shots_for_seq(sequence.as_str());
+        });
         let dialog = VpinDialog {
             dialog: inner_vpin_dialog,
+            seq_changed,
         };
+        dialog
+            .seqs_cb()
+            .current_index_changed2()
+            .connect(&dialog.seq_changed);
         dialog
     }
 
@@ -73,16 +86,27 @@ impl<'a> VpinDialog<'a> {
 
     /// Set the sites
     pub fn set_sites(&self, sites: Vec<&str>) {
-        self.dialog.borrow_mut().set_sites(sites);
+        self.dialog.borrow().set_sites(sites);
     }
 
     /// set the list of rols
     pub fn set_roles(&self, roles: Vec<&str>) {
-        self.dialog.borrow_mut().set_roles(roles);
+        self.dialog.borrow().set_roles(roles);
+    }
+    pub fn seqs_cb(&self) -> MutPtr<QComboBox> {
+        self.dialog.borrow().seqs_cb()
+    }
+    /// Given a new LevelMap, repalace the existing one
+    pub fn set_levels_map(&self, levels: LevelMap) {
+        self.dialog.borrow_mut().set_levels_map(levels);
     }
 
-    /// Given a new LevelMap, repalace the existing one
-    pub fn set_levels(&self, levels: LevelMap) {
-        self.dialog.borrow_mut().set_levels(levels);
+    pub fn set_levels(&self, levels: Vec<String>) {
+        //let levels = self.dialog.borrow().seqs();
+        self.dialog.borrow().set_levels(levels);
+    }
+
+    pub fn set_levels_alt(&self) {
+        self.dialog.borrow().set_levels_alt();
     }
 }
