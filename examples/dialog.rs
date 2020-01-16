@@ -14,42 +14,40 @@ fn main() {
         let button_ptr = button.as_mut_ptr();
         main.set_central_widget(button.into_ptr());
 
-        let dialog = Rc::new(RefCell::new(vpin_dialog::VpinDialog::create(
+        let dialog = Rc::new(vpin_dialog::VpinDialog::create(
             "modelpublish-1.2.0",
             main_ptr,
-        )));
-        dialog.borrow_mut().set_default_stylesheet();
-        dialog.borrow_mut().set_roles(vec![
+        ));
+        dialog.set_default_stylesheet();
+        dialog.set_roles(vec![
             "anim", "integ", "model", "fx", "cfx", "light", "comp", "roto",
         ]);
         let levelmap = initialize_levelmap();
-        dialog.borrow_mut().set_levels(levelmap);
-        dialog
-            .borrow_mut()
-            .set_sites(vec!["hyderabad", "montreal", "playa", "vancouver"]);
+        dialog.set_levels(levelmap);
+        dialog.set_sites(vec!["hyderabad", "montreal", "playa", "vancouver"]);
         let finished_slot = SlotOfInt::new(move |result: std::os::raw::c_int| {
             println!("result {}", result);
         });
 
-        dialog.borrow_mut().finished().connect(&finished_slot);
+        dialog.finished().connect(&finished_slot);
 
         let dialog_c = dialog.clone();
         // we need to create a slot that is triggered when OK is presswed
         let accepted_slot = Slot::new(move || {
             println!("accepted slot");
-            let roles = dialog_c.borrow().selected_roles();
+            let roles = dialog_c.selected_roles();
             println!("{:?}", roles);
             println!("calling accept");
-            dialog_c.borrow_mut().accept();
+            dialog_c.accept();
         });
 
         // here is where we can cheat. We rely on the fact that
         // dialogb will outlive the borrow as mutable. We pass thiw
         // in to the pressed slot.
-        dialog.borrow_mut().accepted().connect(&accepted_slot);
-        //dialog.borrow_mut().set_roles_focus();
-        //let mut dialogb = dialog.borrow_mut().dialog.as_mut_ptr();
-        let mut dialogb = dialog.borrow_mut().dialog_mut();
+        dialog.accepted().connect(&accepted_slot);
+        //dialog.set_roles_focus();
+        //let mut dialogb = dialog.dialog.as_mut_ptr();
+        let mut dialogb = dialog.dialog_mut();
 
         let exec_dialog_slot = Slot::new(move || {
             let result = dialogb.exec(); //
