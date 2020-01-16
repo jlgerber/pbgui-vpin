@@ -7,9 +7,7 @@ QLabel#DistributionLabel {
 }
 
 QGroupBox#SelectRolesGroupBox{
-    /* margin: 10px; */
     padding: 10px;
-    /* padding-right:30px; */
     margin-top: 10px;
 }
 

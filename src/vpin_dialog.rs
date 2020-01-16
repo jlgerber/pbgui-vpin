@@ -14,9 +14,13 @@ pub struct VpinDialog<'a> {
 }
 
 impl<'a> VpinDialog<'a> {
-    pub unsafe fn create(distribution: &str, parent: impl CastInto<MutPtr<QWidget>>) -> VpinDialog {
+    pub unsafe fn create<I: Into<String>>(
+        show: I,
+        distribution: &str,
+        parent: impl CastInto<MutPtr<QWidget>>,
+    ) -> VpinDialog {
         let inner_vpin_dialog = Rc::new(RefCell::new(InnerVpinDialog::create(
-            "DEV01",
+            show,
             distribution,
             parent,
         )));

@@ -14,6 +14,7 @@ fn main() {
         main.set_central_widget(button.into_ptr());
 
         let dialog = Rc::new(vpin_dialog::VpinDialog::create(
+            "DEV01",
             "modelpublish-1.2.0",
             main_ptr,
         ));
