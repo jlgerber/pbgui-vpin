@@ -26,7 +26,6 @@ impl<'a> VpinDialog<'a> {
         )));
         let ivd = inner_vpin_dialog.clone();
         let seq_changed = SlotOfQString::new(move |idx: Ref<QString>| {
-            //println!("seq changed");
             let sequence = idx.to_std_string();
             ivd.borrow().set_shots_for_seq(sequence.as_str());
         });
@@ -56,7 +55,7 @@ impl<'a> VpinDialog<'a> {
     pub unsafe fn finished(&self) -> Signal<(std::os::raw::c_int,)> {
         self.dialog.borrow().finished()
     }
-    /// Get a ponter to the dialog
+    /// Get a pointer to the dialog
     pub fn dialog(&self) -> Ptr<QDialog> {
         self.dialog.borrow().dialog()
     }
@@ -87,14 +86,7 @@ impl<'a> VpinDialog<'a> {
 
     /// Return the selected Sequence/shot if applicable
     pub unsafe fn selected_level(&self) -> Option<String> {
-        let show = self.show_name();
-        if let Some(sequence) = self.dialog.borrow().selected_seq() {
-            if let Some(shot) = self.dialog.borrow().selected_shot() {
-                return Some(format!("{}.{}.{}", show, sequence, shot));
-            }
-            return Some(format!("{}.{}", show, sequence));
-        }
-        None
+        self.dialog.borrow().selected_level()
     }
 
     /// Load the stylesheet
