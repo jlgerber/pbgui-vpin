@@ -40,18 +40,11 @@ fn main() {
             dialog.accept();
         }});
 
-        // here is where we can cheat. We rely on the fact that
-        // dialogb will outlive the borrow as mutable. We pass thiw
-        // in to the pressed slot.
         dialog.accepted().connect(&accepted_slot);
-        //dialog.set_roles_focus();
-        //let mut dialogb = dialog.dialog.as_mut_ptr();
-        let mut dialogb = dialog.dialog_mut();
-
-        let exec_dialog_slot = Slot::new(move || {
-            let result = dialogb.exec(); //
+        let exec_dialog_slot = Slot::new(enclose! { (dialog) move || {
+            let result = dialog.dialog_mut().exec(); //
             println!("exec_dialog_slot triggered by button result -> {}", result);
-        });
+        }});
 
         button_ptr.pressed().connect(&exec_dialog_slot);
         main_ptr.show();
