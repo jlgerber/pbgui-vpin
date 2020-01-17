@@ -26,10 +26,12 @@ pub struct InnerVpinDialog<'a> {
     roles_filter: MutPtr<QLineEdit>,
     roles_list: MutPtr<QListWidget>,
     seqs_cbox: MutPtr<QComboBox>,
+    seq_shot_checkbox: MutPtr<QCheckBox>,
     shots_cbox: MutPtr<QComboBox>,
     sites_cbox: MutPtr<QComboBox>,
     buttons: MutPtr<QDialogButtonBox>,
     levels: LevelMap,
+    seq_shot_cb_slot: SlotOfInt<'a>,
     roles_cb_slot: SlotOfInt<'a>,
 }
 
@@ -66,9 +68,17 @@ impl<'a> InnerVpinDialog<'a> {
 
             // right side controls
             let mut right_layout = Self::add_right_layout(hlayout_ptr);
+            //
+            let seq_shot_checkbox = Self::add_seq_shot_checkbox(right_layout);
             let seq_shot_group_box = Self::add_select_level_groupbox(right_layout);
             let seqs_cbox = Self::add_seq_cbox(seq_shot_group_box.layout());
+            let mut seqs_cbox_ref = seqs_cbox
+                .as_mut_ref()
+                .expect("unable to get mut ref to seq combobox from mutptr");
             let shots_cbox = Self::add_shot_cbox(seq_shot_group_box.layout());
+            let mut shots_cbox_ref = shots_cbox
+                .as_mut_ref()
+                .expect("unable to get mut ref to shot combobox from mutptr");
 
             let sel_sites_group_box = Self::add_select_site_groupbox(right_layout);
             let sites_cbox = Self::add_site_cbox(sel_sites_group_box.layout());
@@ -95,6 +105,9 @@ impl<'a> InnerVpinDialog<'a> {
                 .as_mut_ref()
                 .expect("unable to get ref to roles_filter");
             // default to disabled
+            seqs_cbox_ref.set_enabled(false);
+            shots_cbox_ref.set_enabled(false);
+
             roles_list_ref.set_enabled(false);
             roles_filter_ref.set_enabled(false);
             // create the dialog
@@ -104,11 +117,21 @@ impl<'a> InnerVpinDialog<'a> {
                 roles_checkbox,
                 roles_filter: roles_filter,
                 roles_list,
+                seq_shot_checkbox,
                 seqs_cbox,
                 shots_cbox,
                 sites_cbox,
                 buttons,
                 levels: LevelMap::new(),
+                seq_shot_cb_slot: SlotOfInt::new(move |active: std::os::raw::c_int| {
+                    if active > 0 {
+                        seqs_cbox_ref.set_enabled(true);
+                        shots_cbox_ref.set_enabled(true);
+                    } else {
+                        seqs_cbox_ref.set_enabled(false);
+                        shots_cbox_ref.set_enabled(false);
+                    }
+                }),
                 roles_cb_slot: SlotOfInt::new(move |active: std::os::raw::c_int| {
                     if active > 0 {
                         roles_list_ref.set_enabled(true);
@@ -124,6 +147,10 @@ impl<'a> InnerVpinDialog<'a> {
             };
             // set up internal signals and slots
             // Enable / Disable roles list and filter
+            dialog
+                .seq_shot_checkbox
+                .state_changed()
+                .connect(&dialog.seq_shot_cb_slot);
             dialog
                 .roles_checkbox
                 .state_changed()
@@ -195,11 +222,6 @@ impl<'a> InnerVpinDialog<'a> {
         self.sites_cbox.current_text().to_std_string()
     }
 
-    /// Return the selected Sequence/shot if applicable
-    pub unsafe fn selected_level(&self) -> Option<String> {
-        None
-    }
-
     /// Load the stylesheet
     pub unsafe fn set_default_stylesheet(&mut self) {
         set_stylesheet_from_str(STYLE_STR, self.dialog.as_mut_ptr());
@@ -255,6 +277,22 @@ impl<'a> InnerVpinDialog<'a> {
         }
     }
 
+    /// Return the selected Sequence/shot if applicable
+    pub unsafe fn selected_level(&self) -> Option<String> {
+        if !self.seq_shot_checkbox.is_enabled() {
+            None
+        } else {
+            if let Some(seq) = self.selected_seq() {
+                if let Some(shot) = self.selected_shot() {
+                    Some(format!("{}.{}.{}", self.show, seq, shot))
+                } else {
+                    Some(format!("{}.{}", self.show, seq))
+                }
+            } else {
+                None
+            }
+        }
+    }
     /// Given a new LevelMap, repalace the existing one
     pub fn set_levels_map(&mut self, levels: LevelMap) {
         std::mem::replace(&mut self.levels, levels);
@@ -359,6 +397,14 @@ impl<'a> InnerVpinDialog<'a> {
         group_box_ptr
     }
 
+    unsafe fn add_seq_shot_checkbox(mut parent: MutPtr<QVBoxLayout>) -> MutPtr<QCheckBox> {
+        let mut cb = QCheckBox::from_q_string(&qs("Specify Seq(s) / Shot(s)"));
+        cb.set_object_name(&qs("SeqShotCheckBox"));
+        let cb_ptr = cb.as_mut_ptr();
+        parent.add_widget(cb.into_ptr());
+        cb_ptr
+    }
+
     unsafe fn add_seq_cbox(mut parent: MutPtr<QLayout>) -> MutPtr<QComboBox> {
         let mut seqs_cbox = QComboBox::new_0a();
         seqs_cbox.set_object_name(&qs("AddSeqsComboBox"));
@@ -378,9 +424,6 @@ impl<'a> InnerVpinDialog<'a> {
     }
 
     unsafe fn add_select_level_groupbox(mut parent: MutPtr<QVBoxLayout>) -> MutPtr<QGroupBox> {
-        let mut label = QLabel::from_q_string(&qs("Select Sequence/Shot"));
-        label.set_object_name(&qs("SelectLevelsLabel"));
-        parent.add_widget(label.into_ptr());
         let mut group_box = QGroupBox::new();
         let group_box_ptr = group_box.as_mut_ptr();
         group_box.set_object_name(&qs("SelectLevelsGroupBox"));
