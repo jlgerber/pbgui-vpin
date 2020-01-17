@@ -1,8 +1,10 @@
 use pbgui_vpin::vpin_dialog;
 use pbgui_vpin::vpin_dialog::LevelMap;
 use qt_core::{Slot, SlotOfInt};
+use qt_widgets::cpp_core::MutPtr;
 use qt_widgets::QApplication;
 use qt_widgets::{QMainWindow, QPushButton};
+use rustqt_utils::enclose;
 use std::rc::Rc;
 
 fn main() {
@@ -13,42 +15,30 @@ fn main() {
         let button_ptr = button.as_mut_ptr();
         main.set_central_widget(button.into_ptr());
 
-        let dialog = Rc::new(vpin_dialog::VpinDialog::create(
-            "DEV01",
-            "modelpublish-1.2.0",
-            main_ptr,
-        ));
-        dialog.set_default_stylesheet();
-        dialog.set_roles(vec![
-            "anim", "integ", "model", "fx", "cfx", "light", "comp", "roto",
-        ]);
-        let levelmap = initialize_levelmap();
-        dialog.set_levels_map(levelmap);
-        dialog.set_levels_alt();
-        dialog.set_sites(vec!["any", "hyderabad", "montreal", "playa", "vancouver"]);
+        let dialog = Rc::new(create_dialog("DEV01", "modelpublish-1.2.0", main_ptr));
+
         let finished_slot = SlotOfInt::new(move |result: std::os::raw::c_int| {
             println!("finished_slot -> {}", result);
         });
 
         dialog.finished().connect(&finished_slot);
 
-        let dialog_c = dialog.clone();
         // we need to create a slot that is triggered when OK is presswed
-        let accepted_slot = Slot::new(move || {
-            if let Some(roles) = dialog_c.selected_roles() {
+        let accepted_slot = Slot::new(enclose! { (dialog) move || {
+            if let Some(roles) = dialog.selected_roles() {
                 println!("roles: {:?}", roles);
             } else {
                 println!("roles: any");
             }
-            if let Some(selected_level) = dialog_c.selected_level() {
+            if let Some(selected_level) = dialog.selected_level() {
                 println!("level: {:?}", selected_level);
             } else {
-                println!("level: {}", dialog_c.show_name());
+                println!("level: {}", dialog.show_name());
             }
-            let site = dialog_c.selected_site();
+            let site = dialog.selected_site();
             println!("site:  {}", site);
-            dialog_c.accept();
-        });
+            dialog.accept();
+        }});
 
         // here is where we can cheat. We rely on the fact that
         // dialogb will outlive the borrow as mutable. We pass thiw
@@ -67,6 +57,23 @@ fn main() {
         main_ptr.show();
         QApplication::exec()
     });
+}
+
+unsafe fn create_dialog<'a, I: Into<String>>(
+    name: I,
+    distribution: &'a str,
+    main_ptr: MutPtr<QMainWindow>,
+) -> vpin_dialog::VpinDialog<'a> {
+    let dialog = vpin_dialog::VpinDialog::create(name, distribution, main_ptr);
+    dialog.set_default_stylesheet();
+    dialog.set_roles(vec![
+        "anim", "integ", "model", "fx", "cfx", "light", "comp", "roto",
+    ]);
+    let levelmap = initialize_levelmap();
+    dialog.set_levels_map(levelmap);
+    dialog.set_levels_alt();
+    dialog.set_sites(vec!["any", "hyderabad", "montreal", "playa", "vancouver"]);
+    dialog
 }
 
 fn initialize_levelmap() -> LevelMap {
