@@ -18,7 +18,7 @@ pub use rustqt_utils::{create_hlayout, create_vlayout, qs, set_stylesheet_from_s
 const STYLE_STR: &'static str = include_str!("../resources/pbgui_vpin.qss");
 const DEFAULT_SEQ: &'static str = "All Sequences";
 const DEFAULT_SHOT: &'static str = "All Shots";
-
+pub const DEFAULT_SITE: &'static str = "any";
 pub struct InnerVpinDialog<'a> {
     dialog: CppBox<QDialog>,
     show: String,
@@ -232,6 +232,7 @@ impl<'a> InnerVpinDialog<'a> {
         unsafe {
             let mut sites_cbox = self.sites_cbox;
             sites_cbox.clear();
+            sites_cbox.add_item_q_string(&qs(DEFAULT_SITE));
             for site in sites {
                 sites_cbox.add_item_q_string(&qs(site));
             }
@@ -298,21 +299,21 @@ impl<'a> InnerVpinDialog<'a> {
         std::mem::replace(&mut self.levels, levels);
     }
 
-    pub fn set_levels(&self, levels: Vec<String>) {
-        unsafe {
-            let mut seqs_cbox = self.seqs_cbox;
-            let mut shots_cbox = self.shots_cbox;
-            seqs_cbox.clear();
-            seqs_cbox.add_item_q_string(&qs(DEFAULT_SEQ));
-            for seq in levels {
-                seqs_cbox.add_item_q_string(&qs(seq));
-            }
-            shots_cbox.clear();
-            shots_cbox.add_item_q_string(&qs(DEFAULT_SHOT));
-        }
-    }
+    // pub fn set_levels(&self, levels: Vec<String>) {
+    //     unsafe {
+    //         let mut seqs_cbox = self.seqs_cbox;
+    //         let mut shots_cbox = self.shots_cbox;
+    //         seqs_cbox.clear();
+    //         seqs_cbox.add_item_q_string(&qs(DEFAULT_SEQ));
+    //         for seq in levels {
+    //             seqs_cbox.add_item_q_string(&qs(seq));
+    //         }
+    //         shots_cbox.clear();
+    //         shots_cbox.add_item_q_string(&qs(DEFAULT_SHOT));
+    //     }
+    // }
 
-    pub fn set_levels_alt(&self) {
+    pub fn set_levels_from_map(&self) {
         unsafe {
             let mut seqs_cbox = self.seqs_cbox;
             let mut shots_cbox = self.shots_cbox;

@@ -16,14 +16,16 @@ fn main() {
         main.set_central_widget(button.into_ptr());
 
         let dialog = Rc::new(create_dialog("DEV01", "modelpublish-1.2.0", main_ptr));
-
+        // we can create and hook up a finished slot. However, the finished slot will be activated
+        // whether the user selects Ok or Cancel.
         let finished_slot = SlotOfInt::new(move |result: std::os::raw::c_int| {
             println!("finished_slot -> {}", result);
         });
 
         dialog.finished().connect(&finished_slot);
 
-        // we need to create a slot that is triggered when OK is presswed
+        // we create a slot that is triggered when OK is pressed to act only in the event
+        // that the user has requested action.
         let accepted_slot = Slot::new(enclose! { (dialog) move || {
             if let Some(roles) = dialog.selected_roles() {
                 println!("roles: {:?}", roles);
@@ -35,12 +37,17 @@ fn main() {
             } else {
                 println!("level: {}", dialog.show_name());
             }
-            let site = dialog.selected_site();
-            println!("site:  {}", site);
+            match dialog.selected_site(){
+                Some(site) => println!(
+                    "site:  {}", site
+                ),
+                None => println!("site:  Any"),
+            }
             dialog.accept();
         }});
-
+        // Connect the accepted signal to the accepted slot
         dialog.accepted().connect(&accepted_slot);
+
         let exec_dialog_slot = Slot::new(enclose! { (dialog) move || {
             let result = dialog.dialog_mut().exec(); //
             println!("exec_dialog_slot triggered by button result -> {}", result);
@@ -63,8 +70,10 @@ unsafe fn create_dialog<'a, I: Into<String>>(
         "anim", "integ", "model", "fx", "cfx", "light", "comp", "roto",
     ]);
     let levelmap = initialize_levelmap();
-    dialog.set_levels_map(levelmap);
-    dialog.set_levels_alt();
+    dialog.set_levels(levelmap);
+    //dialog.set_levels_map(levelmap);
+    //dialog.set_levels_from_map();
+
     dialog.set_sites(vec!["any", "hyderabad", "montreal", "playa", "vancouver"]);
     dialog
 }
