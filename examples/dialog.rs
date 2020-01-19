@@ -74,7 +74,7 @@ unsafe fn create_dialog<'a, I: Into<String>>(
     //dialog.set_levels_map(levelmap);
     //dialog.set_levels_from_map();
 
-    dialog.set_sites(vec!["any", "hyderabad", "montreal", "playa", "vancouver"]);
+    dialog.set_sites(vec!["hyderabad", "montreal", "playa", "vancouver"]);
     dialog
 }
 
