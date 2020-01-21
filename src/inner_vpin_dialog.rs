@@ -261,6 +261,9 @@ impl<'a> InnerVpinDialog<'a> {
     }
 
     pub unsafe fn selected_seq(&self) -> Option<String> {
+        if !self.seqs_cbox.is_enabled() {
+            return None;
+        }
         let result = self.seqs_cbox.current_text().to_std_string();
         if result == DEFAULT_SEQ {
             None
@@ -270,6 +273,9 @@ impl<'a> InnerVpinDialog<'a> {
     }
 
     pub unsafe fn selected_shot(&self) -> Option<String> {
+        if !self.shots_cbox.is_enabled() {
+            return None;
+        }
         let result = self.shots_cbox.current_text().to_std_string();
         if result == DEFAULT_SHOT {
             None
@@ -280,7 +286,7 @@ impl<'a> InnerVpinDialog<'a> {
 
     /// Return the selected Sequence/shot if applicable
     pub unsafe fn selected_level(&self) -> Option<String> {
-        if !self.seq_shot_checkbox.is_enabled() {
+        if !self.seq_shot_checkbox.is_checked() {
             None
         } else {
             if let Some(seq) = self.selected_seq() {
