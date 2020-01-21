@@ -71,8 +71,6 @@ unsafe fn create_dialog<'a, I: Into<String>>(
     ]);
     let levelmap = initialize_levelmap();
     dialog.set_levels(levelmap);
-    //dialog.set_levels_map(levelmap);
-    //dialog.set_levels_from_map();
 
     dialog.set_sites(vec!["hyderabad", "montreal", "playa", "vancouver"]);
     dialog
