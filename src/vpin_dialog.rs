@@ -214,9 +214,16 @@ impl<'a> VpinDialog<'a> {
     /// # Returns
     /// * The show name as a String
     pub fn show_name(&self) -> String {
-        self.dialog.borrow().show_name().to_string()
+        self.dialog.borrow().show_name()
     }
 
+    /// Set show name
+    pub fn set_show_name<I>(&self, new_name: I)
+    where
+        I: Into<String>,
+    {
+        self.dialog.borrow().set_show_name(new_name.into());
+    }
     /// Return the a Some wrapped Sequence/shot if the user has activated
     /// the checkbox and selected a sequence or shot. Otherwise, it returns
     /// None
@@ -228,6 +235,17 @@ impl<'a> VpinDialog<'a> {
     /// * Option<String>
     pub unsafe fn selected_level(&self) -> Option<String> {
         self.dialog.borrow().selected_level()
+    }
+
+    /// Set the distribution name
+    ///
+    /// # Arguments
+    /// * distribution - The distribution name
+    ///
+    /// # Returns
+    /// * None
+    pub unsafe fn set_distribution(&self, distribution: &str) {
+        self.dialog.borrow().set_distribution(distribution);
     }
 
     /// Load the default stylesheet
