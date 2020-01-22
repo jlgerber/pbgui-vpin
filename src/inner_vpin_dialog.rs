@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 //! The DistributionDialog allows the user to generate one or more pins for a distribution
-use qt_core::{FocusPolicy, Signal, SlotOfInt};
+use qt_core::{FocusPolicy, QString, Signal, SlotOfInt};
 use qt_widgets::{
     cpp_core::{CastInto, CppBox, MutPtr, Ptr},
     q_abstract_item_view::SelectionMode,
@@ -8,6 +8,7 @@ use qt_widgets::{
     QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFrame, QGroupBox, QHBoxLayout, QLabel,
     QLayout, QLineEdit, QListWidget, QVBoxLayout, QWidget,
 };
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 /// LevelMap maps a sequence to a list of shots
@@ -21,7 +22,8 @@ const DEFAULT_SHOT: &'static str = "All Shots";
 pub const DEFAULT_SITE: &'static str = "any";
 pub struct InnerVpinDialog<'a> {
     dialog: CppBox<QDialog>,
-    show: String,
+    show: RefCell<String>,
+    distribution: MutPtr<QLabel>,
     roles_checkbox: MutPtr<QCheckBox>,
     roles_filter: MutPtr<QLineEdit>,
     roles_list: MutPtr<QListWidget>,
@@ -51,7 +53,7 @@ impl<'a> InnerVpinDialog<'a> {
 
             Self::add_entry_label(layout_ptr);
 
-            Self::add_distribution_label(distribution, layout_ptr);
+            let distribution_label = Self::add_distribution_label(distribution, layout_ptr);
 
             // hlayout will contain the two column  vertical layouts (left and right)
             let mut hlayout = create_hlayout();
@@ -113,7 +115,8 @@ impl<'a> InnerVpinDialog<'a> {
             // create the dialog
             let mut dialog = InnerVpinDialog {
                 dialog,
-                show: show.into(),
+                show: RefCell::new(show.into()),
+                distribution: distribution_label,
                 roles_checkbox,
                 roles_filter: roles_filter,
                 roles_list,
@@ -166,9 +169,26 @@ impl<'a> InnerVpinDialog<'a> {
             dialog
         }
     }
-
-    pub fn show_name(&self) -> &str {
-        &self.show
+    /// retrieve the show_name
+    pub fn show_name(&self) -> String {
+        self.show.borrow().clone()
+    }
+    /// set the show name
+    pub fn set_show_name(&self, new_name: String) {
+        self.show.replace(new_name);
+    }
+    /// retrieve the current distribution as a string
+    pub unsafe fn distribution(&self) -> String {
+        self.distribution.text().to_std_string()
+    }
+    /// Retrieve an owned QString of the distribution text
+    pub unsafe fn distribution_qs(&self) -> CppBox<QString> {
+        self.distribution.text()
+    }
+    /// Set the distribution given a distribution &str
+    pub unsafe fn set_distribution(&self, distribution: &str) {
+        let mut distribution_mut = self.distribution;
+        distribution_mut.set_text(&qs(distribution));
     }
     /// Return the accepted signal from the button. This is provided as a convenience
     /// for hooking up a slot from this struct.
@@ -291,9 +311,9 @@ impl<'a> InnerVpinDialog<'a> {
         } else {
             if let Some(seq) = self.selected_seq() {
                 if let Some(shot) = self.selected_shot() {
-                    Some(format!("{}.{}.{}", self.show, seq, shot))
+                    Some(format!("{}.{}.{}", self.show.borrow(), seq, shot))
                 } else {
-                    Some(format!("{}.{}", self.show, seq))
+                    Some(format!("{}.{}", self.show.borrow(), seq))
                 }
             } else {
                 None
@@ -507,10 +527,14 @@ impl<'a> InnerVpinDialog<'a> {
     }
 
     // add the distribution label in the middle of the dialog
-    unsafe fn add_distribution_label(distribution: &str, mut parent: MutPtr<QVBoxLayout>) {
+    unsafe fn add_distribution_label(
+        distribution: &str,
+        mut parent: MutPtr<QVBoxLayout>,
+    ) -> MutPtr<QLabel> {
         // layout is the top level layout for the dialog
         let mut dist_frame = QFrame::new_0a();
         let mut distribution = QLabel::from_q_string(&qs(distribution));
+        let distribution_ptr = distribution.as_mut_ptr();
         distribution.set_object_name(&qs("DistributionLabel"));
         let mut add_entry_layout = create_hlayout();
         add_entry_layout.add_stretch_1a(1);
@@ -518,5 +542,6 @@ impl<'a> InnerVpinDialog<'a> {
         add_entry_layout.add_stretch_1a(1);
         dist_frame.set_layout(add_entry_layout.into_ptr());
         parent.add_widget(dist_frame.into_ptr());
+        distribution_ptr
     }
 }
