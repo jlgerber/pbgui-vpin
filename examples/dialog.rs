@@ -18,6 +18,8 @@ fn main() {
         let dialog = Rc::new(create_dialog("DEV01", "modelpublish-1.2.0", main_ptr));
         // we can create and hook up a finished slot. However, the finished slot will be activated
         // whether the user selects Ok or Cancel.
+        dialog.set_show_name("DEV02");
+        dialog.set_distribution("modelpublish-1.3.0");
         let finished_slot = SlotOfInt::new(move |result: std::os::raw::c_int| {
             println!("finished_slot -> {}", result);
         });
